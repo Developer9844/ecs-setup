@@ -1,7 +1,6 @@
-output "alb_sg" {
-  value = aws_security_group.alb_sg.id
+output "fargateTargetGroupARN" {
+  value = aws_lb_target_group.fargateTargetGroup.arn
 }
-
-output "alb_target_group_arn" {
-  value = aws_lb_target_group.alb_target_group.arn
-}
+# output "ec2TargetGroupARN" {
+#   value = aws_lb_target_group.ec2TargetGroup.arn
+# }

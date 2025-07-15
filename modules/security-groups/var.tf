@@ -1,0 +1,2 @@
+variable "ProjectName" {}
+variable "vpcID" {}

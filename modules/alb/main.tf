@@ -1,46 +1,19 @@
-resource "aws_security_group" "alb_sg" {
-  name        = "${var.project_name}-ALB-SG"
-  description = "Allow HTTP"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-
-resource "aws_lb" "app_alb" {
-  name               = "${var.project_name}-ALB"
+resource "aws_lb" "applicationLoadBalancer" {
+  name               = "${var.ProjectName}-ALB"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = concat(var.public_subnet_ids)
+  security_groups    = [var.appLoadBalancerSecurityGroupID]
+  subnets            = concat(var.PublicSubnetIDs)
 
 }
 
-resource "aws_lb_target_group" "alb_target_group" {
-  name            = "alb-tg"
+resource "aws_lb_target_group" "fargateTargetGroup" {
+  name            = "${var.ProjectName}-FargateTargetGroup"
   target_type     = "ip" # "instance", "lambda"
   port            = 3000 # container port
   protocol        = "HTTP"
   ip_address_type = "ipv4"
-  vpc_id          = var.vpc_id
+  vpc_id          = var.vpcID
   health_check {
     protocol            = "HTTP"
     path                = "/"
@@ -52,12 +25,44 @@ resource "aws_lb_target_group" "alb_target_group" {
   }
 }
 
-resource "aws_lb_listener" "alb_listener" {
-  load_balancer_arn = aws_lb.app_alb.arn
+resource "aws_lb_listener" "fargateListener" {
+  load_balancer_arn = aws_lb.applicationLoadBalancer.arn
   port              = 80
   protocol          = "HTTP"
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.alb_target_group.arn
+    target_group_arn = aws_lb_target_group.fargateTargetGroup.arn
   }
 }
+
+
+
+#####################################
+
+# resource "aws_lb_target_group" "ec2TargetGroup" {
+#   name            = "${var.ProjectName}-EC2-Target-Group"
+#   target_type     = "instance" # "ip", "lambda"
+#   port            = 3000       # container port
+#   protocol        = "HTTP"
+#   ip_address_type = "ipv4"
+#   vpc_id          = var.vpcID
+#   health_check {
+#     protocol            = "HTTP"
+#     path                = "/"
+#     interval            = 30
+#     timeout             = 5
+#     healthy_threshold   = 5
+#     unhealthy_threshold = 2
+#     matcher             = "200-302"
+#   }
+# }
+
+# resource "aws_lb_listener" "ec2Listener" {
+#   load_balancer_arn = aws_lb.applicationLoadBalancer.arn
+#   port              = 80
+#   protocol          = "HTTP"
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.ec2TargetGroup.arn
+#   }
+# }
