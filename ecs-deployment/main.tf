@@ -39,3 +39,12 @@ module "ecsOnFargate" {
 #   ContainerImage     = var.ContainerImage
 #   depends_on         = [module.vpc, module.appLoadBalancer, module.securityGroups]
 # }
+
+module "codeBuildProject" {
+  source       = "../modules/pipeline/codebuild"
+  github_token = var.github_token
+}
+
+module "chatappFrontendPipeline" {
+  source       = "../modules/pipeline/codepipeline"
+}

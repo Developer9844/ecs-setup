@@ -36,7 +36,7 @@ resource "aws_ecs_task_definition" "fargateTaskDefination" {
 
   container_definitions = jsonencode([
     {
-      name      = "chatapp"
+      name      = "chatapp-frontend"
       image     = var.ContainerImage
       essential = true
       portMappings = [
@@ -64,7 +64,7 @@ resource "aws_ecs_service" "fargateService" {
 
   load_balancer {
     target_group_arn = var.fargateTargetGroupARN
-    container_name   = "chatapp"
+    container_name   = "chatapp-frontend"
     container_port   = 3000
   }
 

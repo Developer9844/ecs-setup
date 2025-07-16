@@ -43,7 +43,7 @@ resource "aws_launch_template" "ecsLaunchTemplate" {
   iam_instance_profile {
     name = aws_iam_instance_profile.ecsInstanceProfile.name
   }
-  user_data = .(<<-EOF
+  user_data = (<<-EOF
       #!/bin/bash 
       echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config;
     EOF
