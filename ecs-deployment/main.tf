@@ -45,6 +45,6 @@ module "codeBuildProject" {
   github_token = var.github_token
 }
 
-module "chatappFrontendPipeline" {
-  source       = "../modules/pipeline/codepipeline"
-}
+# module "chatappFrontendPipeline" {
+#   source       = "../modules/pipeline/codepipeline"
+# }

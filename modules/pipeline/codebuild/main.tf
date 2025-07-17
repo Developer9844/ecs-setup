@@ -13,6 +13,29 @@ resource "aws_iam_role" "codebuild_role" {
   })
 }
 
+
+resource "aws_iam_role_policy" "allow_custom_policies" {
+  name = "AllowCustomPoliciesToCodePipeline"
+  role = aws_iam_role.codebuild_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:ListBucket"
+        ],
+        Resource = "*"
+      },
+      
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "codebuild_policy" {
   role       = aws_iam_role.codebuild_role.name
   policy_arn = "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess"

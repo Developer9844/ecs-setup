@@ -58,6 +58,45 @@ resource "aws_codestarconnections_connection" "github_connection" {
 
 
 
+resource "aws_iam_role_policy" "allow_custom_policies" {
+  name = "AllowCustomPoliciesToCodePipeline"
+  role = aws_iam_role.codepipeline_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "codestar-connections:UseConnection"
+          ]
+        Resource = "arn:aws:codestar-connections:us-east-1:600748199510:connection/a99dca0d-19e3-40e2-9686-646fca7cbedb"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:ListBucket"
+        ],
+        Resource = [
+          "${aws_s3_bucket.artifact_bucket.arn}",
+          "${aws_s3_bucket.artifact_bucket.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "codebuild:BatchGetBuilds",
+          "codebuild:StartBuild"
+        ],
+        Resource = "arn:aws:codebuild:us-east-1:600748199510:project/*"
+      }
+    ]
+  })
+}
+
 
 
 
