@@ -5,6 +5,8 @@ cidrBlock      = "10.0.0.0/16"
 ContainerImage = "600748199510.dkr.ecr.us-east-1.amazonaws.com/dev/chatapp:latest-2025-07-10"
 InstanceType   = "t3.medium"
 KeyName        = "new-server"
+aws_region     = "us-east-1"
+account_id     = "600748199510"
 # github_token   = ""github
 #  _pat_11BBQUHAI
 #  0Rgigm9bjOwVD_iwjJbOB004CmJp0swBayf6E

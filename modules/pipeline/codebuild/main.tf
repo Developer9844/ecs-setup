@@ -13,6 +13,9 @@ resource "aws_iam_role" "codebuild_role" {
   })
 }
 
+locals {
+  connection_id = split("/", data.aws_codestarconnections_connection.github.arn)[1]
+}
 
 resource "aws_iam_role_policy" "allow_custom_policies" {
   name = "AllowCustomPoliciesToCodePipeline"
@@ -31,6 +34,20 @@ resource "aws_iam_role_policy" "allow_custom_policies" {
         ],
         Resource = "*"
       },
+      {
+        Effect = "Allow",
+        Action = [
+            "codestar-connections:GetConnectionToken",
+            "codestar-connections:GetConnection",
+            "codeconnections:GetConnectionToken",
+            "codeconnections:GetConnection",
+            "codeconnections:UseConnection"
+        ],
+        Resource = [
+            "arn:aws:codestar-connections:${var.aws_region}:${var.account_id}:connection/${local.connection_id}",
+            "${data.aws_codestarconnections_connection.github.arn}"
+        ]
+        }
       
     ]
   })
@@ -55,13 +72,9 @@ resource "aws_iam_role_policy_attachment" "codebuild_ecr" {
 
 
 
-resource "aws_codebuild_source_credential" "github" {
-  auth_type     = "PERSONAL_ACCESS_TOKEN"
-  server_type   = "GITHUB"
-  token         = var.github_token 
+data "aws_codestarconnections_connection" "github" {
+  name = "my-github-connection"
 }
-
-
 
 resource "aws_codebuild_project" "frontendCodeBuildProject" {
   name          = "frontend-build"
@@ -81,13 +94,16 @@ resource "aws_codebuild_project" "frontendCodeBuildProject" {
   }
 
   source {
-    type      = "GITHUB"
-    location  = "https://github.com/Developer9844/auth_app.git"
+    type     = "GITHUB"
+    location = "https://github.com/Developer9844/auth_app.git"
     git_clone_depth = 1
     buildspec = "buildspec-frontend.yaml"
+    auth {
+      type = "CODECONNECTIONS"
+      resource = data.aws_codestarconnections_connection.github.arn
+    }
   }
-
-  source_version = "master"
+  source_version = "master"  
 }
 
 
@@ -114,6 +130,10 @@ resource "aws_codebuild_project" "backendCodeBuildProject" {
     location  = "https://github.com/Developer9844/auth_app.git"
     git_clone_depth = 1
     buildspec = "buildspec-backend.yaml"
+    auth {
+      type = "CODECONNECTIONS"
+      resource = data.aws_codestarconnections_connection.github.arn
+    }
   }
 
   source_version = "master"

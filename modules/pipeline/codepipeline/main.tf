@@ -1,5 +1,5 @@
 resource "aws_iam_role" "codepipeline_role" {
-  name = "ecsCodePipelineRole"
+  name = "My-CodePipelineRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -17,88 +17,114 @@ resource "aws_iam_role_policy_attachment" "codepipeline_policy_attach" {
   role       = aws_iam_role.codepipeline_role.name
   policy_arn = "arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess"
 }
-
-# resource "aws_iam_policy" "codepipeline_custom" {
-#   name = "codepipelineCustom"
-#   policy = jsonencode({
-#     Version = "2012-10-17",
-#     Statement = [{
-#         Effect = "Allow",
-#         Action = [
-#             "ecr:DescribeImages"
-#         ],
-#         Resource = "*"
-#     }]
-#   })
-# }
-
-
-# resource "aws_iam_role_policy_attachment" "codepipeline_custome_policy_attach" {
-#   role       = aws_iam_role.codepipeline_role.name
-#   policy_arn = aws_iam_policy.codepipeline_custom.arn
-# }
-
-
-resource "random_id" "suffix" {
-  byte_length = 4
+resource "aws_iam_role_policy_attachment" "codebuild_policy" {
+  role       = aws_iam_role.codepipeline_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess"
 }
 
-resource "aws_s3_bucket" "artifact_bucket" {
-  bucket = "chatapp-artifacts-${random_id.suffix.hex}"
-  force_destroy = true
-}
-
-
-
-
-resource "aws_codestarconnections_connection" "github_connection" {
-  name          = "github-connection-chatapp"
-  provider_type = "GitHub"
-}
-
-
-
-resource "aws_iam_role_policy" "allow_custom_policies" {
-  name = "AllowCustomPoliciesToCodePipeline"
+resource "aws_iam_role_policy" "codepipeline_custom" {
+  name = "codepipelineCustom"
   role = aws_iam_role.codepipeline_role.name
-
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        Effect   = "Allow",
-        Action   = [
-          "codestar-connections:UseConnection"
-          ]
-        Resource = "arn:aws:codestar-connections:us-east-1:600748199510:connection/a99dca0d-19e3-40e2-9686-646fca7cbedb"
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:GetBucketVersioning",
+          "s3:PutObjectAcl",
+          "s3:PutObject"
+        ],
+        Resource = "*"
       },
       {
         Effect = "Allow",
         Action = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:GetObjectVersion",
-          "s3:ListBucket"
+          "codestar-connections:GetConnectionToken",
+          "codestar-connections:GetConnection",
+          "codeconnections:GetConnectionToken",
+          "codeconnections:GetConnection",
+          "codeconnections:UseConnection",
+          "codestar-connections:UseConnection"
         ],
         Resource = [
-          "${aws_s3_bucket.artifact_bucket.arn}",
-          "${aws_s3_bucket.artifact_bucket.arn}/*"
+          "arn:aws:codestar-connections:${var.aws_region}:${var.account_id}:connection/${local.connection_id}",
+          "${data.aws_codestarconnections_connection.github.arn}"
         ]
       },
       {
-        Effect = "Allow",
-        Action = [
-          "codebuild:BatchGetBuilds",
-          "codebuild:StartBuild"
+        "Sid" : "TaskDefinitionPermissions",
+        "Effect" : "Allow",
+        "Action" : [
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition"
         ],
-        Resource = "arn:aws:codebuild:us-east-1:600748199510:project/*"
+        "Resource" : [
+          "*"
+        ]
+      },
+      {
+        "Sid" : "ECSServicePermissions",
+        "Effect" : "Allow",
+        "Action" : [
+          "ecs:DescribeServices",
+          "ecs:UpdateService"
+        ],
+        "Resource" : [
+          "arn:aws:ecs:*:600748199510:service/My-Cluster/*"
+        ]
+      },
+      {
+        "Sid" : "ECSTagResource",
+        "Effect" : "Allow",
+        "Action" : [
+          "ecs:TagResource"
+        ],
+        "Resource" : [
+          "arn:aws:ecs:*:600748199510:task-definition/arn:aws:ecs:us-east-1:600748199510:task-definition/fargateTaskDefination:6:*"
+        ],
+        "Condition" : {
+          "StringEquals" : {
+            "ecs:CreateAction" : [
+              "RegisterTaskDefinition"
+            ]
+          }
+        }
+      },
+      {
+        "Sid" : "IamPassRolePermissions",
+        "Effect" : "Allow",
+        "Action" : "iam:PassRole",
+        "Resource" : [
+          "arn:aws:iam::600748199510:role/My-Cluster-ecsTaskExecutionRole"
+        ],
+        "Condition" : {
+          "StringEquals" : {
+            "iam:PassedToService" : [
+              "ecs.amazonaws.com",
+              "ecs-tasks.amazonaws.com"
+            ]
+          }
+        }
       }
     ]
   })
 }
 
 
+data "aws_codestarconnections_connection" "github" {
+  name = "my-github-connection"
+}
+locals {
+  connection_id = split("/", data.aws_codestarconnections_connection.github.arn)[1]
+}
 
+
+resource "aws_s3_bucket" "codepipeline_bucket" {
+  bucket = "codepipeline-artifacts-bucket-3924"
+}
 
 
 resource "aws_codepipeline" "chatapp_pipeline" {
@@ -106,15 +132,15 @@ resource "aws_codepipeline" "chatapp_pipeline" {
   role_arn = aws_iam_role.codepipeline_role.arn
 
   artifact_store {
-    location = aws_s3_bucket.artifact_bucket.bucket
     type     = "S3"
+    location = "codepipeline-artifacts-bucket-3924"
   }
 
   stage {
     name = "Source"
 
     action {
-      name             = "GitHub_Source"
+      name             = "Source"
       category         = "Source"
       owner            = "AWS"
       provider         = "CodeStarSourceConnection"
@@ -122,7 +148,7 @@ resource "aws_codepipeline" "chatapp_pipeline" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        ConnectionArn = aws_codestarconnections_connection.github_connection.arn
+        ConnectionArn    = data.aws_codestarconnections_connection.github.arn
         FullRepositoryId = "Developer9844/auth_app"
         BranchName       = "master"
         DetectChanges    = "true"

@@ -43,8 +43,12 @@ module "ecsOnFargate" {
 module "codeBuildProject" {
   source       = "../modules/pipeline/codebuild"
   github_token = var.github_token
+  account_id   = var.account_id
+  aws_region   = var.aws_region
 }
 
-# module "chatappFrontendPipeline" {
-#   source       = "../modules/pipeline/codepipeline"
-# }
+module "chatappFrontendPipeline" {
+  source     = "../modules/pipeline/codepipeline"
+  aws_region = var.aws_region
+  account_id = var.account_id
+}
